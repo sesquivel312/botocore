@@ -16,6 +16,8 @@ import os
 import logging
 import time
 import threading
+# customized std lib imports below
+import getpass
 
 from botocore.vendored.requests.adapters import HTTPAdapter
 from botocore.vendored.requests.sessions import Session
@@ -283,7 +285,12 @@ class EndpointCreator(object):
     def _get_proxies(self, url):
         # We could also support getting proxies from a config file,
         # but for now proxy support is taken from the environment.
-        return get_environ_proxies(url)
+
+        # **** BEGIN CUSTOMIZATIONS ****
+        return {'https': 'https://user:password@the.proxy.com'}
+
+        # return get_environ_proxies(url)
+        # **** END CUSTOMIZATIONS ****
 
     def _get_verify_value(self, verify):
         # This is to account for:
