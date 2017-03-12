@@ -18,6 +18,7 @@ import time
 import threading
 # customized std lib imports below
 import getpass
+import urllib
 
 from botocore.vendored.requests.adapters import HTTPAdapter
 from botocore.vendored.requests.sessions import Session
@@ -35,7 +36,6 @@ from botocore.hooks import first_non_none_response
 from botocore.response import StreamingBody
 from botocore import parsers
 
-
 logger = logging.getLogger(__name__)
 DEFAULT_TIMEOUT = 60
 MAX_POOL_CONNECTIONS = 10
@@ -43,6 +43,7 @@ filter_ssl_warnings()
 
 try:
     from botocore.vendored.requests.packages.urllib3.contrib import pyopenssl
+
     pyopenssl.extract_from_urllib3()
 except ImportError:
     pass
@@ -84,6 +85,7 @@ class BotocoreHTTPSession(Session):
     This class is intended to be used only by the Endpoint class.
 
     """
+
     def __init__(self, max_pool_connections=MAX_POOL_CONNECTIONS,
                  http_adapter_cls=HTTPAdapter):
         super(BotocoreHTTPSession, self).__init__()
@@ -182,11 +184,11 @@ class Endpoint(object):
             success_response, exception = self._get_response(
                 request, operation_model, attempts)
         if success_response is not None and \
-                'ResponseMetadata' in success_response[1]:
+                        'ResponseMetadata' in success_response[1]:
             # We want to share num retries, not num attempts.
             total_retries = attempts - 1
             success_response[1]['ResponseMetadata']['RetryAttempts'] = \
-                    total_retries
+                total_retries
         if exception is not None:
             raise exception
         else:
@@ -270,7 +272,6 @@ class EndpointCreator(object):
                         timeout=DEFAULT_TIMEOUT,
                         max_pool_connections=MAX_POOL_CONNECTIONS):
         if not is_valid_endpoint_url(endpoint_url):
-
             raise ValueError("Invalid endpoint: %s" % endpoint_url)
         return Endpoint(
             endpoint_url,
@@ -287,7 +288,17 @@ class EndpointCreator(object):
         # but for now proxy support is taken from the environment.
 
         # **** BEGIN CUSTOMIZATIONS ****
-        return {'https': 'https://user:password@the.proxy.com'}
+        proxy_user = getpass.getpass('Enter proxy user ID: ')
+        proxy_pwd = getpass.getpass('Enter proxy pwd: ')
+        proxy_host = raw_input('Enter proxy host name: ')
+        proxy_port = raw_input('Enter proxy port: ')
+        if proxy_user and proxy_port:
+            user_info = urllib.quote(proxy_user + ':' + proxy_pwd)
+            proxy_url = 'https://{}@{}:{}'.format(user_info, proxy_host, proxy_port)
+        else:
+            proxy_url = 'https://{}:{}'.format(proxy_host, proxy_port)
+        print proxy_url
+        return {'https': proxy_url}
 
         # return get_environ_proxies(url)
         # **** END CUSTOMIZATIONS ****
